@@ -23,7 +23,7 @@ fails on your branch, fix the content; do not allowlist around it.
 ```bash
 git clone https://github.com/ET-sec/resolve-console-bridge.git
 cd resolve-console-bridge
-git config core.hooksPath .githooks      # gitleaks before every commit, identity check before every push
+git config core.hooksPath .githooks      # gitleaks before every commit, identity check before every push (public rules)
 brew install luajit gitleaks             # or your platform's packages
 git clone --branch v4.7.9 --depth 1 https://github.com/samuelgursky/davinci-resolve-mcp.git upstream
 luajit test/test_protocol.lua test/fixtures.json
