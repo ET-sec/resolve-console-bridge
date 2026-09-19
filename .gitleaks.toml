@@ -10,15 +10,17 @@ title = "Gitleaks config: resolve-console-bridge (public part)"
 [extend]
 useDefault = true
 
+# A named home folder on any platform. Two rules because the shapes differ: /Users/name/ and
+# /home/name/ on macOS and Linux, C:\Users\name on Windows. Examples in docs use ~ instead.
 [[rules]]
 id = "personal-home-path"
-description = "An absolute path into a named user's home folder (macOS or Linux)"
+description = "An absolute path into a named user's home folder (macOS, Linux; Windows is the next rule)"
 regex = '''/(Users|home)/[A-Za-z0-9._-]+/'''
 tags = ["pii"]
 
 [[rules]]
 id = "personal-home-path-windows"
-description = "An absolute path into a named user's profile folder (Windows)"
+description = "An absolute path into a named user's profile folder (Windows, C:\\Users\\name)"
 regex = '''[A-Za-z]:\\Users\\[A-Za-z0-9._-]+'''
 tags = ["pii"]
 
