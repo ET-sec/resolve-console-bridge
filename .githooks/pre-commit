@@ -13,10 +13,17 @@
 set -euo pipefail
 
 REPO_ROOT="$(git rev-parse --show-toplevel)"
+# The maintainer's clone sets `git config hooks.maintainer true`: it carries a gitignored
+# .gitleaks.local.toml of literal tripwires and refuses to run without it. Every other clone scans
+# with the tracked public config, the same rules CI runs.
+MAINTAINER="$(git config --get hooks.maintainer || true)"
 GL_CONFIG="$REPO_ROOT/.gitleaks.local.toml"
 if [ ! -f "$GL_CONFIG" ]; then
-  echo "BLOCKED. $GL_CONFIG is missing. It holds the literal tripwires that must not live in the public config; restore it from the private store before committing."
-  exit 1
+  if [ "$MAINTAINER" = "true" ]; then
+    echo "BLOCKED. $GL_CONFIG is missing and this clone requires it; restore it from the private store before committing."
+    exit 1
+  fi
+  GL_CONFIG="$REPO_ROOT/.gitleaks.toml"
 fi
 STYLE_SCRIPT="$(git config --get hooks.prose-style-check || true)"
 

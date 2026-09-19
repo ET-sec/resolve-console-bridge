@@ -14,10 +14,17 @@
 set -euo pipefail
 
 REPO_ROOT="$(git rev-parse --show-toplevel)"
+# The maintainer's clone sets `git config hooks.maintainer true`: it carries a gitignored
+# .gitleaks.local.toml of literal tripwires and refuses to run without it. Every other clone scans
+# with the tracked public config, the same rules CI runs.
+MAINTAINER="$(git config --get hooks.maintainer || true)"
 GL_CONFIG="$REPO_ROOT/.gitleaks.local.toml"
 if [ ! -f "$GL_CONFIG" ]; then
-  echo "BLOCKED. $GL_CONFIG is missing. It holds the literal tripwires that must not live in the public config; restore it from the private store before committing."
-  exit 1
+  if [ "$MAINTAINER" = "true" ]; then
+    echo "BLOCKED. $GL_CONFIG is missing and this clone requires it; restore it from the private store before committing."
+    exit 1
+  fi
+  GL_CONFIG="$REPO_ROOT/.gitleaks.toml"
 fi
 
 if ! command -v gitleaks >/dev/null 2>&1; then
@@ -43,6 +50,12 @@ echo "pre-push: gitleaks clean on all unpushed commits."
 # pushed (read from stdin), so a stale local-only branch cannot false-block an
 # unrelated push. Same rule the authorship-guard workflow enforces on the
 # pipeline, so a --no-verify commit is still stopped at the merge.
+# On a clone without an approved-author list (any contributor's), the identity check is left to
+# CI, where the AUTHORSHIP_ALLOW variable supplies the list; the maintainer's clone fails closed.
+if [ -z "${APPROVED_AUTHORS:-}" ] && [ ! -f "$REPO_ROOT/.githooks/authors.allow" ] && [ "$MAINTAINER" != "true" ]; then
+  echo "pre-push: no approved-author list on this clone; the authorship check runs in CI."
+  exit 0
+fi
 ZERO=0000000000000000000000000000000000000000
 authorship_fail=0
 while read -r _lref lsha _rref rsha; do

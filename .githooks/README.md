@@ -11,7 +11,10 @@ public, so a scan that only runs after the push runs too late.
 | `pre-push` | any unpushed commit carrying a secret, and any commit in the push range by an unapproved identity |
 
 Install with `git config core.hooksPath .githooks` and `brew install gitleaks` (or your platform's
-package). The approved identity list lives outside the code: `.githooks/authors.allow` locally
+package). The hooks scan with the tracked `.gitleaks.toml`, the same rules CI runs, and leave the identity
+check to CI when the clone has no approved-author list. The maintainer's clone sets
+`git config hooks.maintainer true`: it adds a gitignored `.gitleaks.local.toml` of literal tripwires
+and a gitignored `authors.allow`, and refuses to run without them. The approved identity list lives outside the code: `.githooks/authors.allow` locally
 (gitignored) and the `AUTHORSHIP_ALLOW` repository variable in CI, so no personal address lives in
 the tree. The two public GitHub no-reply addresses that the web merge button and Actions use are
 the only ones named in the scripts.
