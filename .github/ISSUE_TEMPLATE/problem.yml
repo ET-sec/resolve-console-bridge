@@ -1,0 +1,25 @@
+name: Something did not work
+description: The three things needed to reproduce it.
+body:
+  - type: input
+    id: resolve
+    attributes:
+      label: Resolve version, edition and operating system
+      description: Help > About inside Resolve. Say free or Studio.
+      placeholder: "21.1.0.14 free, macOS 26"
+    validations:
+      required: true
+  - type: input
+    id: client
+    attributes:
+      label: AI client and davinci-resolve-mcp version
+      placeholder: "Claude Code, davinci-resolve-mcp v4.7.9"
+    validations:
+      required: true
+  - type: textarea
+    id: saw
+    attributes:
+      label: What you pasted and what came back
+      description: The Console line you used and the exact text Resolve or your AI client printed. Do not paste your bridge.json; it holds your token.
+    validations:
+      required: true

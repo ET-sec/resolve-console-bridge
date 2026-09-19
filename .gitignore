@@ -1,0 +1,14 @@
+# Private to this machine. Never tracked.
+.gitleaks.local.toml
+.githooks/authors.allow
+bridge.json
+*.log
+
+# Tooling leftovers
+__pycache__/
+*.pyc
+.venv/
+venv/
+upstream/
+.DS_Store
+Thumbs.db

@@ -1,0 +1,58 @@
+name: Tests
+# The protocol suite and the end-to-end run against the real davinci-resolve-mcp client, on the
+# two runner platforms that have LuaJIT packaged. Windows runs the same Lua inside Resolve; the
+# harness is exercised there by hand.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  tests:
+    name: tests (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Check out davinci-resolve-mcp at the protocol version this bridge tracks
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          repository: samuelgursky/davinci-resolve-mcp
+          ref: v4.7.9
+          path: upstream
+          persist-credentials: false
+
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.12"
+
+      - name: Install LuaJIT
+        run: |
+          if [ "$RUNNER_OS" = "Linux" ]; then sudo apt-get update -q && sudo apt-get install -y -q luajit; fi
+          if [ "$RUNNER_OS" = "macOS" ]; then brew install luajit; fi
+          luajit -v
+
+      - name: Protocol suite (hash vectors, canonical JSON, signatures, replay, tamper)
+        run: luajit test/test_protocol.lua test/fixtures.json
+
+      - name: End to end, real MCP client against a fake Resolve
+        run: python3 test/e2e_client.py upstream
+
+      - name: End to end in Console mode (no io, require, package or debug), started through the entry script
+        run: BRIDGE_CONSOLE_MODE=1 python3 test/e2e_client.py upstream
+
+      - name: Installer on a fresh home, then the installed copy serves the same suite
+        run: |
+          export HOME="$(mktemp -d)"
+          bash install.sh
+          test -f "$HOME/.config/davinci-resolve-mcp/bridge.json"
+          test "$(stat -c %a "$HOME/.config/davinci-resolve-mcp/bridge.json" 2>/dev/null || stat -f %Lp "$HOME/.config/davinci-resolve-mcp/bridge.json")" = "600"
+          python3 -c 'import json,os; c=json.load(open(os.path.expanduser("~/.config/davinci-resolve-mcp/bridge.json"))); assert len(c["token"])>=43 and 49152<=c["port"]<65536, c'
+          BRIDGE_CONSOLE_MODE=1 BRIDGE_INSTALL_DIR="$HOME/.config/davinci-resolve-mcp/console-bridge" python3 test/e2e_client.py upstream

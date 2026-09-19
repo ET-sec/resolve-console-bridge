@@ -1,0 +1,62 @@
+title = "Gitleaks config: resolve-console-bridge (public part)"
+
+# A custom config REPLACES gitleaks' built-in ruleset unless it extends it. useDefault pulls in the
+# full default ruleset; the rules below are additions on top, not the whole defense.
+#
+# Two-layer layout: this tracked file carries only PATTERN-shaped tripwires, because a literal value
+# in a public rule file publishes the very thing the rule exists to keep out. Literal tripwires live
+# in the gitignored .gitleaks.local.toml, which extends this file. The git hooks refuse to run
+# without the local file; CI runs this file on its own.
+[extend]
+useDefault = true
+
+[[rules]]
+id = "personal-home-path"
+description = "An absolute path into a named user's home folder (macOS or Linux)"
+regex = '''/(Users|home)/[A-Za-z0-9._-]+/'''
+tags = ["pii"]
+
+[[rules]]
+id = "personal-home-path-windows"
+description = "An absolute path into a named user's profile folder (Windows)"
+regex = '''[A-Za-z]:\\Users\\[A-Za-z0-9._-]+'''
+tags = ["pii"]
+
+[[rules]]
+id = "external-volume-path"
+description = "A mounted external drive path from the maintainer's workstation"
+regex = '''/Volumes/[A-Za-z0-9._-]+'''
+tags = ["pii"]
+
+[[rules]]
+id = "maintainer-hostnames"
+description = "Any host under the maintainer's domain (nothing in this tool talks to it)"
+regex = '''[A-Za-z0-9-]+\.tigouetheory\.com'''
+tags = ["infrastructure"]
+
+[[rules]]
+id = "gmail-address"
+description = "Any Gmail address (personal logins never belong in this repository)"
+regex = '''[A-Za-z0-9._%+-]+@gmail\.com'''
+tags = ["pii"]
+
+[[rules]]
+id = "us-phone-number"
+description = "A phone number in the (NNN) NNN-NNNN shape"
+regex = '''\([0-9]{3}\)\s*[0-9]{3}-[0-9]{4}'''
+tags = ["pii"]
+
+[[rules]]
+id = "bridge-token-value"
+description = "A bridge token assigned in code or config (tokens are generated at install and live only in bridge.json)"
+regex = '''"token"\s*:\s*"[A-Za-z0-9_-]{43,}"'''
+tags = ["secret"]
+
+[allowlist]
+description = "Intentional test fixtures"
+# The protocol fixtures carry a fixed, published token so the signatures in fixtures.json can be
+# recomputed by anyone; it protects nothing and is named as a fixture.
+regexes = [
+  '''fixture-token-0123456789abcdefghijklmnopqrstuvwxyz-ABCDEFGHIJKLMNOP''',
+  '''\([0-9]{3}\)\s*555-[0-9]{4}''',
+]
