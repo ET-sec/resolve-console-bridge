@@ -14,6 +14,13 @@
 set -euo pipefail
 
 REPO_ROOT="$(git rev-parse --show-toplevel)"
+
+# Leak guard (.githooks/leak-guard/): refuses pushed commits that add secret file types (.pem, .env,
+# env.sh, .tfvars, .tfstate, plan files), a file over 5 MB, or a private IPv4 address, and runs
+# gitleaks over exactly those commits. Fails closed. The stdin refs are kept for the gates below.
+PUSH_REFS="$(cat)"
+printf '%s\n' "$PUSH_REFS" | python3 -I "$REPO_ROOT/.githooks/leak-guard/leak_guard.py" \
+  --deny "$REPO_ROOT/.githooks/leak-guard/deny.txt" || exit 1
 # The maintainer's clone sets `git config hooks.maintainer true`: it carries a gitignored
 # .gitleaks.local.toml of literal tripwires and refuses to run without it. Every other clone scans
 # with the tracked public config, the same rules CI runs.
@@ -65,7 +72,7 @@ while read -r _lref lsha _rref rsha; do
   else
     bash "$REPO_ROOT/scripts/repo/check_authorship.sh" "$rsha..$lsha" || authorship_fail=1
   fi
-done
+done < <([ -n "$PUSH_REFS" ] && printf '%s\n' "$PUSH_REFS")
 if [ "$authorship_fail" -ne 0 ]; then
   echo "pre-push: BLOCKED by the authorship gate above."
   exit 1
